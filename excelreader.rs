@@ -1,49 +1,67 @@
-//reads ROTORMOD excel file
+use calamine::{open_workbook, Reader, Xlsx, DataType, Result};
 
-use calamine::{open_workbook_auto, Reader, Sheets};
-use std::env;
-use std::path::PathBuf;
+fn main() -> Result<()> {
+    // Define the path to your Excel file
+    let path = "ROTORMOD_V5_test_tool.xlsm";
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Construct the path to the Excel file
-    // Assuming the Excel file is in the same directory as your Cargo.toml
-    let mut current_dir = env::current_dir()?;
-    current_dir.push("ROTORMOD_V5_NNL_Phase_1_Test_Rig_2.0.xlsx"); // Original Excel file name
+    // --- Vectors to store column data ---
+    let mut names: Vec<String> = Vec::new();
+    let mut ages: Vec<f64> = Vec::new();
+    let mut cities: Vec<String> = Vec::new();
 
-    let path: PathBuf = current_dir;
-    let sheet_name = "Rotor Export";
+    // Open the workbook
+    let mut workbook: Xlsx<_> = open_workbook(path)?;
 
-    println!("Attempting to open Excel file: {:?}", path);
-    println!("Looking for sheet: \"{}\"", sheet_name);
-
-    // Open the workbook automatically detecting the file type
-    let mut excel_workbook: Sheets = open_workbook_auto(&path)?;
-
-    // Get the specific sheet by name
-    if let Some(Ok(range)) = excel_workbook.worksheet_range(sheet_name) {
-        println!("\nSuccessfully found and read \"{}\" sheet.", sheet_name);
-        println!("Sheet dimensions: {:?}", range.get_size());
-        println!("Number of rows: {}", range.get_size().0);
-        println!("Number of columns: {}", range.get_size().1);
-        println!("\n--- Content of \"Rotor Export\" sheet ---");
-
-        // Iterate over rows and print cell values
-        for row in range.rows() {
-            for (i, cell) in row.iter().enumerate() {
-                // Print cell value, followed by a tab.
-                // You might want to format this based on your specific needs.
-                print!("{}", cell);
-                if i < row.len() - 1 {
-                    print!("\t"); // Add a tab between cells
+    // Get the worksheet by name. You could also use `workbook.worksheet_range_at(0)` for the first sheet.
+    if let Some(Ok(range)) = workbook.worksheet_range("Rotor Export") {
+        // Iterate over rows, skipping the first (header) row
+        for row in range.rows().skip(1) {
+            // Column A: Name (String)
+            if let Some(cell) = row.get(0) {
+                if let Some(name) = cell.get_string() {
+                    names.push(name.to_string());
                 }
             }
-            println!(); // Newline after each row
+
+            // Column B: Age (Float/Int)
+            if let Some(cell) = row.get(1) {
+                if let Some(age) = cell.get_f64() {
+                    ages.push(age);
+                }
+            }
+
+            // Column C: City (String)
+            if let Some(cell) = row.get(2) {
+                // Using a match statement for demonstration
+                match cell {
+                    DataType::String(city) => cities.push(city.to_string()),
+                    // You could add more match arms to handle other data types if necessary
+                    _ => {}
+                }
+            }
         }
     } else {
-        eprintln!("Error: Sheet \"{}\" not found in the workbook.", sheet_name);
-        // You can list available sheets for debugging:
-        // println!("Available sheets: {:?}", excel_workbook.sheet_names());
+        // Handle the case where the sheet is not found
+        eprintln!("Error: Worksheet 'Sheet1' not found in {}", path);
     }
+
+    // --- Print the resulting vectors to verify the data ---
+    println!("## Data read successfully! ✅");
+
+    println!("\nNames Vector:");
+    println!("{:?}", names);
+
+    println!("\nAges Vector:");
+    println!("{:?}", ages);
+
+    println!("\nCities Vector:");
+    println!("{:?}", cities);
+
+    // You can now use these vectors elsewhere in your program.
+    // For example, finding the average age:
+    let total_age: f64 = ages.iter().sum();
+    let average_age = total_age / ages.len() as f64;
+    println!("\nAverage Age: {:.2}", average_age);
 
     Ok(())
 }
