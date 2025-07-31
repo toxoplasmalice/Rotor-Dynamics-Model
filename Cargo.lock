@@ -7,6 +7,7 @@ name = "Rotor-Dynamics-Model"
 version = "0.1.0"
 dependencies = [
  "calamine",
+ "serde",
 ]
 
 [[package]]
